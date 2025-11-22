@@ -1,0 +1,83 @@
+/**
+ * BLE Vulnerability Scanner / Enumerator (NimBLE)
+ * Para fins acadêmicos de auditoria de segurança.
+ */
+
+#include <NimBLEDevice.h>
+
+// COLOQUE O MAC DO ALVO AQUI
+// Exemplo: "aa:bb:cc:11:22:33"
+static BLEAddress targetDeviceAddress("XX:XX:XX:XX:XX:XX"); 
+
+void setup() {
+  Serial.begin(115200);
+  Serial.println("Iniciando Auditoria BLE...");
+
+  NimBLEDevice::init("");
+  
+  // 1. Cria o Cliente
+  NimBLEClient* pClient = NimBLEDevice::createClient();
+
+  Serial.printf("Tentando conectar em: %s ...\n", targetDeviceAddress.toString().c_str());
+  
+  // 2. Tenta Conectar (Se falhar, o dispositivo pode estar fora de alcance ou recusando conexões)
+  if (pClient->connect(targetDeviceAddress)) {
+    Serial.println("Conectado! Iniciando mapeamento de serviços...");
+  } else {
+    Serial.println("Falha ao conectar. Verifique se o dispositivo está ligado/anunciando.");
+    return;
+  }
+
+  // 3. Obtém todos os serviços
+  std::vector<NimBLERemoteService*>* pServices = pClient->getServices(true);
+  
+  for (auto* pService : *pServices) {
+    Serial.println("---------------------------------------------------");
+    Serial.printf("Serviço Encontrado: %s\n", pService->getUUID().toString().c_str());
+    
+    // Tenta identificar serviços comuns
+    if(pService->getUUID().equals(NimBLEUUID((uint16_t)0x180A))) {
+      Serial.println("  [!] ALERTA: Device Information Service exposto (Info Leak)");
+    }
+
+    // 4. Obtém todas as características deste serviço
+    std::vector<NimBLERemoteCharacteristic*>* pChars = pService->getCharacteristics(true);
+    
+    for (auto* pChar : *pChars) {
+      Serial.printf("  -> Característica: %s\n", pChar->getUUID().toString().c_str());
+      
+      // 5. Analisa as Permissões (Properties)
+      Serial.print("     Permissões: ");
+      
+      if (pChar->canRead()) {
+        Serial.print("[READ] ");
+        // Tenta ler o valor para ver se está aberto
+        if(pChar->canRead()) {
+             std::string value = pChar->readValue();
+             Serial.printf("(Valor lido: %s) ", value.c_str());
+        }
+      }
+      
+      if (pChar->canWrite()) Serial.print("[WRITE] ");
+      if (pChar->canWriteNoResponse()) Serial.print("[WRITE NO RESP] ");
+      if (pChar->canNotify()) Serial.print("[NOTIFY] ");
+      if (pChar->canIndicate()) Serial.print("[INDICATE] ");
+      
+      Serial.println();
+
+      // Análise de Vulnerabilidade Simples
+      if (pChar->canWrite() || pChar->canWriteNoResponse()) {
+         Serial.println("     [!] PERIGO: Escrita permitida. Verificar necessidade de autenticação.");
+      }
+    }
+  }
+  
+  Serial.println("---------------------------------------------------");
+  Serial.println("Auditoria finalizada. Desconectando...");
+  pClient->disconnect();
+}
+
+void loop() {
+  // Nada aqui, roda apenas uma vez
+  delay(1000);
+}
