@@ -1,0 +1,40 @@
+[2025-11-22 22:17:42] ets Jul 29 2019 12:21:46
+[2025-11-22 22:17:42] rst:0x1 (POWERON_RESET),boot:0x13 (SPI_FAST_FLASH_BOOT)
+[2025-11-22 22:17:42] configsip: 0, SPIWP:0xee
+[2025-11-22 22:17:42] clk_drv:0x00,q_drv:0x00,d_drv:0x00,cs0_drv:0x00,hd_drv:0x00,wp_drv:0x00
+[2025-11-22 22:17:42] mode:DIO, clock div:2
+[2025-11-22 22:17:42] load:0x3fff0030,len:1184
+[2025-11-22 22:17:42] load:0x40078000,len:13232
+[2025-11-22 22:17:42] load:0x40080400,len:3028
+[2025-11-22 22:17:42] entry 0x400805e4
+[2025-11-22 22:17:43] Iniciando escaneamento...
+[2025-11-22 22:17:53] ets Jul 29 2019 12:21:46
+[2025-11-22 22:17:53] rst:0x1 (POWERON_RESET),boot:0x13 (SPI_FAST_FLASH_BOOT)
+[2025-11-22 22:17:53] configsip: 0, SPIWP:0xee
+[2025-11-22 22:17:53] clk_drv:0x00,q_drv:0x00,d_drv:0x00,cs0_drv:0x00,hd_drv:0x00,wp_drv:0x00
+[2025-11-22 22:17:53] mode:DIO, clock div:2
+[2025-11-22 22:17:53] load:0x3fff0030,len:1184
+[2025-11-22 22:17:53] load:0x40078000,len:13232
+[2025-11-22 22:17:53] load:0x40080400,len:3028
+[2025-11-22 22:17:53] entry 0x400805e4
+[2025-11-22 22:17:53] Iniciando escaneamento...
+[2025-11-22 22:18:20] ets Jul 29 2019 12:21:46
+[2025-11-22 22:18:20] rst:0x1 (POWERON_RESET),boot:0x13 (SPI_FAST_FLASH_BOOT)
+[2025-11-22 22:18:20] configsip: 0, SPIWP:0xee
+[2025-11-22 22:18:20] clk_drv:0x00,q_drv:0x00,d_drv:0x00,cs0_drv:0x00,hd_drv:0x00,wp_drv:0x00
+[2025-11-22 22:18:20] mode:DIO, clock div:2
+[2025-11-22 22:18:20] load:0x3fff0030,len:1184
+[2025-11-22 22:18:20] load:0x40078000,len:13232
+[2025-11-22 22:18:20] load:0x40080400,len:3028
+[2025-11-22 22:18:20] entry 0x400805e4
+[2025-11-22 22:18:21] Iniciando escaneamento...
+[2025-11-22 22:19:01] ets Jul 29 2019 12:21:46
+[2025-11-22 22:19:01] rst:0x1 (POWERON_RESET),boot:0x13 (SPI_FAST_FLASH_BOOT)
+[2025-11-22 22:19:01] configsip: 0, SPIWP:0xee
+[2025-11-22 22:19:01] clk_drv:0x00,q_drv:0x00,d_drv:0x00,cs0_drv:0x00,hd_drv:0x00,wp_drv:0x00
+[2025-11-22 22:19:01] mode:DIO, clock div:2
+[2025-11-22 22:19:01] load:0x3fff0030,len:1184
+[2025-11-22 22:19:01] load:0x40078000,len:13232
+[2025-11-22 22:19:01] load:0x40080400,len:3028
+[2025-11-22 22:19:01] entry 0x400805e4
+[2025-11-22 22:19:01] Iniciando escaneamento...
