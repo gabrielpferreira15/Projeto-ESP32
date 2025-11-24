@@ -26,7 +26,7 @@
 // --- CONFIGURAÇÕES ---
 const int scanTime = 5;
 const char* DATA_FILENAME = "/scan_log.jsonl";
-const int MAX_SCANS = 10;
+const int MAX_SCANS = 3;
 
 // --- ESTRUTURA DE DADOS ---
 struct DeviceData {
@@ -70,10 +70,11 @@ void setup() {
   sessionMacAddresses.reserve(60);
 
   BLEDevice::init("ESP32_Auditor_DeepPro");
+  BLEDevice::setPower(ESP_PWR_LVL_P9);
   pBLEScan = BLEDevice::getScan();
   pBLEScan->setActiveScan(true);
   pBLEScan->setInterval(100);
-  pBLEScan->setWindow(99);
+  pBLEScan->setWindow(80);
   
   Serial.println("Sistema pronto. Iniciando escaneamento.");
 }
@@ -293,6 +294,15 @@ void explorarServicosAtivos(String address, int addrType) {
 
     if (pClient->connect(BLEAddress(address.c_str()), type)) {
         Serial.println("    [CONECTADO] Conectado ao alvo. A ler tabela GATT...");
+
+        BLERemoteService* pRemoteService = pClient->getService("1800");
+        if (pRemoteService != nullptr) {
+            BLERemoteCharacteristic* pRemoteChar = pRemoteService->getCharacteristic("2a00");
+            if (pRemoteChar != nullptr && pRemoteChar->canRead()) {
+                std::string value = pRemoteChar->readValue();
+                Serial.printf("    >>> NOME INTERNO DESCOBERTO: %s <<<\n", value.c_str());
+            }
+        }
         
         std::map<std::string, BLERemoteService*>* pServices = pClient->getServices();        
         
