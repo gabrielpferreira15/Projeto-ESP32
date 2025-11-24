@@ -1,0 +1,271 @@
+/*
+ * Disciplina: Algoritmos e Estruturas de Dados
+ * Projeto: Sistema de Auditoria de Dispositivos BLE com ESP32
+ * Autores: André Sieczko (@cesar.school)
+ *          Arthur Leandro Costa (alc@cesar.school)
+ *          Gabriel Peixoto e Silva Ferreira (gpsf@cesar.school)
+ *          Pedro Henrique Guimarães Liberal (phgl@cesar.school)
+ *          Rafael Holder (@cesar.school)  
+ *          
+ * Biblioteca necessária: NimBLE-Arduino (Instalar via Library Manager)
+ */
+
+#include <Arduino.h>
+#include <NimBLEDevice.h>
+#include <ArduinoJson.h>
+#include <FS.h>
+#include <LittleFS.h>
+#include <vector>
+
+// --- CONFIGURAÇÕES GLOBAIS ---
+const uint32_t scanTime = 5;
+const char* DATA_FILENAME = "/scan_log.jsonl";
+const int MAX_SCANS = 5;
+
+// --- ESTRUTURA DE DADOS ---
+struct DeviceData {
+  String name;
+  String address;
+  int rssi;
+  String manufacturerData;
+};
+
+// --- ARRAYS GLOBAIS ---
+std::vector<DeviceData> currentDeviceList;  // Lista de dispositivos carregados para auditoria
+std::vector<String> sessionMacAddresses;    // MACs salvos na sessão atual para evitar duplicadas
+
+NimBLEScan* pBLEScan;
+
+// --- PROTÓTIPOS DAS FUNÇÕES ---
+void initFS();
+String payloadToHex(const std::string& payload);
+void saveScanToFile(NimBLEScanResults& foundDevices);
+void loadDataToArray();
+bool isAddressAlreadySaved(String address);
+
+// --- PROTÓTIPOS DAS FUNÇÕES DE AUDITORIA ---
+void auditarDispositivo(String targetAddress, String targetName);
+void iniciarCicloDeAuditoria();
+
+// --- SETUP E LOOP PRINCIPAL ---
+void setup() {
+  Serial.begin(115200);
+  delay(3000);
+  
+  Serial.println("\n\n=== INICIANDO SISTEMA DE AUDITORIA BLE ===");
+  initFS();
+
+  sessionMacAddresses.clear();
+
+  NimBLEDevice::init("ESP32_Auditor");
+  NimBLEDevice::setPower(ESP_PWR_LVL_P9);
+  pBLEScan = NimBLEDevice::getScan();
+  pBLEScan->setActiveScan(true);
+  //pBLEScan->setActiveScan(false);
+  //pBLEScan->setDuplicateFilter(false);
+  //pBLEScan->setInterval(100);
+  //pBLEScan->setWindow(99);
+  pBLEScan->setInterval(45);
+  pBLEScan->setWindow(15);
+  pBLEScan->setMaxResults(0);
+}
+
+void loop() {
+  for (int i = 0; i < MAX_SCANS; i++) {
+    Serial.printf("--- [COLETA] Ciclo %d/%d ---\n", i + 1, MAX_SCANS);
+
+    pBLEScan->start(scanTime, false);
+    //while(pBLEScan->isScanning()) {
+    //  delay(100);
+    //}
+    NimBLEScanResults foundDevices = pBLEScan->getResults();
+    
+    Serial.printf("Encontrados: %d. Salvando novos no LittleFS...\n", foundDevices.getCount());
+    saveScanToFile(foundDevices);
+    
+    pBLEScan->clearResults();
+    delay(5000); 
+  }
+
+  Serial.println(">>> COLETA FINALIZADA. <<<");
+
+  loadDataToArray();
+  iniciarCicloDeAuditoria();
+  
+  Serial.println("--- SISTEMA FINALIZADO (Reinicie para nova auditoria) ---");
+  while (true) {
+    delay(1000); 
+  }
+}
+
+// --- FUNÇÕES PRINCIPAIS ---
+void iniciarCicloDeAuditoria() {
+  if (currentDeviceList.empty()) {
+    Serial.println("Nenhum alvo encontrado para auditar.");
+    return;
+  }
+
+  Serial.println("\n\n");
+  Serial.println("===============================================");
+  Serial.println("   INICIANDO AUDITORIA DE VULNERABILIDADES");
+  Serial.println("===============================================");
+  
+  for (const auto& device : currentDeviceList) {
+    auditarDispositivo(device.address, device.name);
+    delay(1000); 
+    yield();
+  }
+}
+
+void auditarDispositivo(String targetAddress, String targetName) {
+  Serial.println("\n---------------------------------------------------");
+  Serial.printf("ALVO: %s (%s)\n", targetAddress.c_str(), targetName.c_str());
+  Serial.println("Tentando conectar...");
+
+  NimBLEClient* pClient = NimBLEDevice::createClient();
+  //NimBLEClient* pClient = nullptr;
+  NimBLEAddress adr(targetAddress.c_str(), 1);
+
+  pClient->setConnectionParams(12, 12, 0, 51);
+  pClient->setConnectTimeout(5);
+
+  if (pClient->connect(adr, false)) { 
+      Serial.println("[+] CONECTADO! Mapeando serviços...");
+
+      const std::vector<NimBLERemoteService*>& services = pClient->getServices(true);
+      
+      for (auto* pService : services) {
+          Serial.printf("   Serviço: %s\n", pService->getUUID().toString().c_str());
+
+          if(pService->getUUID().equals(NimBLEUUID((uint16_t)0x180A))) {
+             Serial.println("   [!] ALERTA: Informações do Dispositivo expostas!");
+          }
+
+          const std::vector<NimBLERemoteCharacteristic*>& pChars = pService->getCharacteristics(true);
+          
+          for (auto* pChar : pChars) {
+              String uuid = pChar->getUUID().toString().c_str();
+              Serial.printf("     -> Char: %s | ", uuid.c_str());
+
+              // Analisa Permissões
+              if (pChar->canRead()) {
+                  Serial.print("[READ] ");
+                  // Tenta ler valor (Data Leak)
+                  std::string value = pChar->readValue();
+                  if (!value.empty()) {
+                    Serial.print("Val: ");
+                    for(int i=0; i<value.length(); i++) Serial.printf("%02X", (unsigned char)value[i]);
+                  }
+              }
+              
+              if (pChar->canWrite()) Serial.print("[WRITE] ");
+              if (pChar->canWriteNoResponse()) Serial.print("[WRITE NO_RESP] ");
+              if (pChar->canNotify()) Serial.print("[NOTIFY] ");
+
+              if (pChar->canWrite() || pChar->canWriteNoResponse()) {
+                  Serial.print(" <--- [!] PERIGO (Escrita Aberta)");
+              }
+              Serial.println();
+              yield(); 
+          }
+      }
+      
+      Serial.println("[+] Auditoria finalizada. Desconectando.");
+      pClient->disconnect();
+  } else {
+      Serial.println("[-] Falha ao conectar (Timeout ou Recusado).");
+  }
+
+  NimBLEDevice::deleteClient(pClient);
+}
+
+// --- FUNÇÕES AUXILIARES DE ARQUIVO E DADOS ---
+void initFS() {
+  if (!LittleFS.begin(true)) {
+    Serial.println("ERRO CRÍTICO: LittleFS falhou");
+    return;
+  }
+  if (LittleFS.exists(DATA_FILENAME)) {
+    LittleFS.remove(DATA_FILENAME);
+  }
+}
+
+// Verifica se MAC já está na RAM da sessão atual
+bool isAddressAlreadySaved(String address) {
+  for (const String& savedAddr : sessionMacAddresses) {
+    if (savedAddr.equals(address)) return true;
+  }
+  return false;
+}
+
+// Converte payload (std::string do NimBLE) para Hex String
+String payloadToHex(const std::string& payload) {
+  String hexString = "";
+  if (payload.length() == 0) return hexString;
+  
+  hexString.reserve(payload.length() * 2);
+  for (size_t i = 0; i < payload.length(); i++) {
+    unsigned char c = (unsigned char)payload[i];
+    if (c < 16) hexString += "0";
+    hexString += String(c, HEX);
+  }
+  return hexString;
+}
+
+void saveScanToFile(NimBLEScanResults& foundDevices) {
+  File file = LittleFS.open(DATA_FILENAME, "a");
+  if (!file) return;
+
+  for (int i = 0; i < foundDevices.getCount(); i++) {
+    const NimBLEAdvertisedDevice* device = foundDevices.getDevice(i);
+    String addr = device->getAddress().toString().c_str();
+
+    if (isAddressAlreadySaved(addr)) continue;
+
+    sessionMacAddresses.push_back(addr);
+
+    JsonDocument doc;
+    doc["n"] = device->haveName() ? device->getName().c_str() : "N/A";
+    doc["a"] = addr;
+    doc["r"] = device->getRSSI();
+    
+    if (device->haveManufacturerData()) {
+        doc["m"] = payloadToHex(device->getManufacturerData());
+    } else {
+        doc["m"] = "";
+    }
+
+    serializeJson(doc, file);
+    file.println();
+  }
+  file.close();
+}
+
+void loadDataToArray() {
+  Serial.println("Carregando alvos do arquivo...");
+  currentDeviceList.clear();
+  
+  std::vector<String>().swap(sessionMacAddresses); 
+
+  File file = LittleFS.open(DATA_FILENAME, "r");
+  if (!file) return;
+
+  while (file.available()) {
+    String jsonLine = file.readStringUntil('\n');
+    if (jsonLine.length() < 5) continue;
+
+    JsonDocument doc;
+    DeserializationError error = deserializeJson(doc, jsonLine);
+
+    if (!error) {
+      DeviceData data;
+      data.name = doc["n"].as<String>();
+      data.address = doc["a"].as<String>();
+      data.rssi = doc["r"];
+      data.manufacturerData = doc["m"].as<String>();
+      currentDeviceList.push_back(data);
+    }
+  }
+  file.close();
+  Serial.printf("Alvos carregados na RAM: %d\n", currentDeviceList.size());
+}

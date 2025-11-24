@@ -1,19 +1,33 @@
+/*
+ * Disciplina: Algoritmos e Estruturas de Dados
+ * Projeto: Sistema de Auditoria de Dispositivos BLE com ESP32
+ * Autores: André Sieczko (@cesar.school)
+ *          Arthur Leandro Costa (alc@cesar.school)
+ *          Gabriel Peixoto e Silva Ferreira (gpsf@cesar.school)
+ *          Pedro Henrique Guimarães Liberal (phgl@cesar.school)
+ *          Rafael Holder (@cesar.school)  
+ *          
+ * Biblioteca necessária: NimBLE-Arduino (Instalar via Library Manager)
+ */
+
 #include <Arduino.h>
 #include <BLEDevice.h>
 #include <BLEUtils.h>
 #include <BLEScan.h>
 #include <BLEAdvertisedDevice.h>
+#include <BLEClient.h>
 #include <ArduinoJson.h>
 #include <FS.h>
 #include <LittleFS.h>
 #include <vector>
+#include <map>
 
-/* CONFIGURAÇÕES */
+// --- CONFIGURAÇÕES ---
 const int scanTime = 5;
 const char* DATA_FILENAME = "/scan_log.jsonl";
-const int MAX_SCANS = 5;
+const int MAX_SCANS = 10;
 
-/* ESTRUTURA DE DADOS */
+// --- ESTRUTURA DE DADOS ---
 struct DeviceData {
   String name;
   String address;
@@ -23,32 +37,37 @@ struct DeviceData {
   String payloadHex;
 };
 
-// Arrays globais (devices e MACs)
+// --- Arrays globais (devices e MACs) ---
 std::vector<DeviceData> currentDeviceList;
 std::vector<String> sessionMacAddresses;
 
 BLEScan* pBLEScan;
 
-/* FUNÇÕES AUXILIARES */
+// --- FUNÇÕES AUXILIARES ---
 void initFS();
 bool isAddressAlreadySaved(String address);
 String payloadToHex(uint8_t* payload, size_t length);
 void saveScanToFile(BLEScanResults foundDevices);
 void loadDataToArray();
 void processarDadosDoArray();
+void realizarAuditoriaEmDispositivo(const DeviceData& device, int index);
+String analisarTipoMAC(String mac);
+void explorarServicosAtivos(String address);
+String traduzirUUID(String uuid);
+String obterPropriedades(BLERemoteCharacteristic* pChar);
 
-/* SETUP E LOOP */
+// ---  SETUP E LOOP ---
 void setup() {
   Serial.begin(115200);
   delay(2000);
 
-  Serial.println("Iniciando sistema...");
+  Serial.println("\n=== INICIANDO SISTEMA DE AUDITORIA BLE (DEEP SCAN) ===");
   initFS();
 
   sessionMacAddresses.clear();
   sessionMacAddresses.reserve(60);
 
-  BLEDevice::init("ESP32_Scanner");
+  BLEDevice::init("ESP32_Auditor_DeepPro");
   pBLEScan = BLEDevice::getScan();
   pBLEScan->setActiveScan(true);
   pBLEScan->setInterval(100);
@@ -59,25 +78,27 @@ void setup() {
 
 void loop() {
   for (int i = 0; i < MAX_SCANS; i++) {
-    Serial.printf("--- Iniciando ciclo %d/%d ---\n", i + 1, MAX_SCANS);
+    Serial.printf("\n--- Ciclo de Escaneamento %d/%d ---\n", i + 1, MAX_SCANS);
     BLEScanResults foundDevices = pBLEScan->start(scanTime, false);
     
-    Serial.printf("Dispositivos encontrados neste ciclo: %d\n", foundDevices.getCount());
+    Serial.printf("Dispositivos detectados: %d\n", foundDevices.getCount());
     saveScanToFile(foundDevices);
     pBLEScan->clearResults(); 
 
-    delay(5000); 
+    //if (i < MAX_SCANS - 1) delay(2000);
+    delay(5000);
   }
 
-  Serial.println(">>> LIMITE DE ESCANEAMENTOS ATINGIDO. <<<");
-
+  Serial.println("\n>>> COLETA CONCLUÍDA. INICIANDO CARREGAMENTO <<<");
   loadDataToArray();
-  Serial.println("--- Iniciando a anãlise dos escaneamentos. ---");
+
+  Serial.println("\n================ RELATÓRIO DE AUDITORIA ================");
   processarDadosDoArray();
+  Serial.println("========================================================");
 
   BLEDevice::deinit(true);
   
-  Serial.println("--- Fim do processo. Entrando em loop infinito (Idle) ---");
+  Serial.println("\n--- Processo finalizado. Sistema em Standby. ---");;
   while (true) {
     delay(1000); 
   }
@@ -86,14 +107,14 @@ void loop() {
 /* IMPLEMENTAÇÃO DAS FUNÇÕES AUXILIARES */
 void initFS() {
   if (!LittleFS.begin(true)) {
-    Serial.println("Falha fatal no LittleFS");
+    Serial.println("Erro Fatal: Falha ao montar LittleFS");
     return;
   }
   Serial.println("LittleFS OK.");
   
   if (LittleFS.exists(DATA_FILENAME)) {
     LittleFS.remove(DATA_FILENAME);
-    Serial.println("Log antigo removido.");
+    Serial.println("Log anterior limpo com sucesso.");
   }
 }
 
@@ -120,7 +141,7 @@ String payloadToHex(uint8_t* payload, size_t length) {
 void saveScanToFile(BLEScanResults foundDevices) {
   File file = LittleFS.open(DATA_FILENAME, "a");
   if (!file) {
-    Serial.println("Erro ao abrir arquivo para gravação.");
+    Serial.println("Erro: Não foi possível escrever no arquivo.");
     return;
   }
 
@@ -141,8 +162,20 @@ void saveScanToFile(BLEScanResults foundDevices) {
     doc["name"] = device.haveName() ? device.getName() : "N/A";
     doc["addr"] = device.getAddress().toString();
     doc["rssi"] = device.haveRSSI() ? device.getRSSI() : 0;
-    doc["txPower"] = device.haveTXPower() ? device.getTXPower() : 0;
-    doc["manufacturerData"] = device.haveManufacturerData() ? device.getManufacturerData() : "N/A";
+    doc["txPower"] = device.haveTXPower() ? device.getTXPower() : -127;
+
+    if (device.haveManufacturerData()) {
+        std::string md = device.getManufacturerData();
+        String hexMD = "";
+        for (int j = 0; j < md.length(); j++) {
+            char buf[3];
+            sprintf(buf, "%02X", (unsigned char)md[j]);
+            hexMD += buf;
+        }
+        doc["manufacturerData"] = hexMD;
+    } else {
+        doc["manufacturerData"] = "N/A";
+    }
 
     if (device.getPayloadLength() > 0) {
        doc["payload"] = payloadToHex(device.getPayload(), device.getPayloadLength());
@@ -155,12 +188,15 @@ void saveScanToFile(BLEScanResults foundDevices) {
   }
   
   file.close();
-  Serial.println("Dados salvos no LittleFS.");
+  if (newDevicesCount > 0) {
+    Serial.printf("Novos dispositivos únicos arquivados: %d\n", newDevicesCount);
+  } else {
+    Serial.println("Nenhum novo dispositivo único encontrado neste ciclo.");
+  }
 }
 
 void loadDataToArray() {
-    currentDeviceList.clear();
-
+  currentDeviceList.clear();
   std::vector<String>().swap(sessionMacAddresses);
 
   File file = LittleFS.open(DATA_FILENAME, "r");
@@ -170,7 +206,6 @@ void loadDataToArray() {
   }
 
   Serial.println("--- Lendo dados ÚNICOS do arquivo para a RAM ---");
-
   while (file.available()) {
     String jsonLine = file.readStringUntil('\n');
     
@@ -193,21 +228,155 @@ void loadDataToArray() {
   }
   file.close();
   
-  Serial.printf("Total de registros carregados na RAM: %d\n", currentDeviceList.size());
+  Serial.printf("Registros carregados na RAM para auditoria: %d\n", currentDeviceList.size());
+}
+
+String analisarTipoMAC(String mac) {
+    // Se o bit menos significativo do primeiro byte for 1, é Multicast (não comum em device address).
+    // Se o segundo bit menos significativo for 1, é "Locally Administered" (Random).
+    // Ex: mac = "5a:..." -> 0x5A -> 0101 1010. O segundo bit (bit 1) é 1.
+    long firstByte = strtol(mac.substring(0, 2).c_str(), NULL, 16);
+    
+    // Verifica bit "Locally Administered" (bitmask 0x02)
+    if (firstByte & 0x02) {
+        // Geralmente dispositivos móveis (iOS/Android) usam Random Resolvable Private Addresses para privacidade
+        return "RANDOM/PRIVATE (Privacidade Ativa)";
+    } else {
+        return "PUBLIC (Fixo de Fábrica)";
+    }
+}
+
+String traduzirUUID(String uuid) {
+    uuid.toLowerCase();
+    if (uuid.indexOf("1800") >= 0) return "Generic Access";
+    if (uuid.indexOf("1801") >= 0) return "Generic Attribute";
+    if (uuid.indexOf("180a") >= 0) return "Device Information";
+    if (uuid.indexOf("180f") >= 0) return "Battery Service";
+    if (uuid.indexOf("180d") >= 0) return "Heart Rate";
+    if (uuid.indexOf("1812") >= 0) return "Human Interface Device (HID)";
+    if (uuid.indexOf("ffe0") >= 0) return "HC-05/06 Serial (Proprietário)";
+    if (uuid.indexOf("fe9f") >= 0) return "Google/Android Fast Pair";
+    if (uuid.indexOf("fd6f") >= 0) return "Contact Tracing (COVID/Exposure)";
+    return "Desconhecido / Proprietário";
+}
+
+String obterPropriedades(BLERemoteCharacteristic* pChar) {
+    String props = "";
+    if (pChar->canRead()) props += "READ ";
+    if (pChar->canWrite()) props += "WRITE ";
+    if (pChar->canWriteNoResponse()) props += "WRITE_NO_RESP ";
+    if (pChar->canNotify()) props += "NOTIFY ";
+    if (pChar->canIndicate()) props += "INDICATE ";
+    if (pChar->canBroadcast()) props += "BROADCAST ";
+    
+    if (props == "") props = "NONE";
+    return "[" + props + "]";
+}
+
+void explorarServicosAtivos(String address) {
+    Serial.println("    >>> INICIANDO PROBING (DEEP SCAN) <<<");
+    BLEClient* pClient = BLEDevice::createClient();
+    
+    if (pClient->connect(BLEAddress(address.c_str()))) {
+        Serial.println("    [CONECTADO] Conectado ao alvo. A ler tabela GATT...");
+        
+        std::map<std::string, BLERemoteService*>* pServices = pClient->getServices();        
+        
+        if (pServices != nullptr) {
+            Serial.printf("    [INFO] Serviços encontrados: %d\n", pServices->size());
+
+            for (auto const& [uuid_str, remoteService] : *pServices) {
+                String svcUUID = String(remoteService->getUUID().toString().c_str());
+                Serial.printf("       + Serviço: %s (%s)\n", svcUUID.c_str(), traduzirUUID(svcUUID).c_str());
+                
+                std::map<std::string, BLERemoteCharacteristic*>* pChars = remoteService->getCharacteristics();
+                
+                if (pChars != nullptr) {
+                    for (auto const& [char_uuid, remoteChar] : *pChars) {
+                        String charUUID = String(remoteChar->getUUID().toString().c_str());
+                        String flags = obterPropriedades(remoteChar);
+                        
+                        Serial.printf("          -> Char: %s  %s\n", charUUID.c_str(), flags.c_str());
+                    }
+                }
+            }
+            
+            /*
+            for (auto const& [uuid_str, remoteService] : *pServices) {
+                String uuidClean = String(remoteService->getUUID().toString().c_str());
+                String description = traduzirUUID(uuidClean);
+                Serial.printf("       - UUID: %s [%s]\n", uuidClean.c_str(), description.c_str());
+            }
+            */
+        } else {
+            Serial.println("    [ERRO] Falha ao enumerar serviços.");
+        }
+        
+        pClient->disconnect();
+        Serial.println("    [FIM] Desconectado.");
+    } else {
+        Serial.println("    [FALHA] O dispositivo recusou a conexão ou saiu do alcance.");
+    }
+    
+    delete pClient;
+    delay(500);
+}
+
+void realizarAuditoriaEmDispositivo(const DeviceData& device, int index) {
+    Serial.printf("\n[ALVO #%02d] %s\n", index + 1, device.address.c_str());
+    Serial.println("----------------------------------------------------------------");
+    
+    Serial.print("Nome:          ");
+    if (device.name == "N/A") {
+        Serial.println("NÃO IDENTIFICADO (Suspeito ou Beacon simples)");
+    } else {
+        Serial.println(device.name);
+    }
+    
+    Serial.printf("Tipo MAC:      %s\n", analisarTipoMAC(device.address).c_str());
+
+    Serial.printf("Sinal (RSSI):  %d dBm", device.rssi);
+    if (device.rssi > -60) {
+      Serial.println(" [CRÍTICO: Alvo próximo - Executando Deep Scan]");
+      explorarServicosAtivos(device.address);
+    } else if (device.rssi > -70) {
+      Serial.println("ALERTA: Próximo (Sala)");
+    } else if (device.rssi > -90) {
+      Serial.println("INFO: Distante");
+    } else {
+      Serial.println("INFO: Sinal fraco/Instável");
+    }
+
+    if (device.manufacturerData != "N/A") {
+        Serial.printf("Dados Fabr.:   %s (Tam: %d bytes)\n", device.manufacturerData.c_str(), device.manufacturerData.length() / 2);
+        
+        if (device.manufacturerData.startsWith("4C00")) {
+            Serial.println("               -> DETECÇÃO: Provável dispositivo Apple/iBeacon");
+        }
+        else if (device.manufacturerData.startsWith("0600")) {
+             Serial.println("               -> DETECÇÃO: Provável dispositivo Microsoft");
+        }
+    } else {
+        Serial.println("Dados Fabr.:   Não foi possível obter dados de fabricante.");
+    }
+
+    if (device.payloadHex.length() > 0) {
+        Serial.printf("Payload:       DETECTADO (%d bytes)\n", device.payloadHex.length() / 2);
+    }
 }
 
 void processarDadosDoArray() {
-  Serial.println(">>> Processando dados armazenados no Array Global <<<");
-  // Exemplo: Calcular média de RSSI ou buscar um MAC específico
-  if (currentDeviceList.empty()) return;
-
-  long totalRSSI = 0;
-  for (const auto& dev : currentDeviceList) {
-    totalRSSI += dev.rssi;
-    // Exemplo: Imprimir apenas dispositivos com sinal forte
-    if (dev.rssi > -50) {
-        Serial.printf("Dispositivo Forte: %s (%s)\n", dev.name.c_str(), dev.address.c_str());
-    }
+  if (currentDeviceList.empty()) {
+    Serial.println("Nenhum dispositivo para auditar.");
+    return;
   }
-  Serial.printf("Média de RSSI dos dados históricos: %ld\n", totalRSSI / currentDeviceList.size());
+
+  int idx = 0;
+  for (const auto& dev : currentDeviceList) {
+    realizarAuditoriaEmDispositivo(dev, idx);
+    idx++;
+  }
+  
+  Serial.println("\n--- Resumo Estatístico ---");
+  Serial.printf("Total Auditado: %d dispositivos\n", currentDeviceList.size());
 }
