@@ -1,15 +1,16 @@
 /*
  * Disciplina: Algoritmos e Estruturas de Dados
  * Projeto: Sistema de Auditoria de Dispositivos BLE com ESP32
- * Autores: André Sieczko (@cesar.school)
+ * Autores: André Luis Freire de Andrade Sieczko (alfas@cesar.school)
  *          Arthur Leandro Costa (alc@cesar.school)
  *          Gabriel Peixoto e Silva Ferreira (gpsf@cesar.school)
  *          Pedro Henrique Guimarães Liberal (phgl@cesar.school)
- *          Rafael Holder (@cesar.school)  
+ *          Rafael Holder de Oliveira (rho@cesar.school)  
  *          
- * Biblioteca necessária: NimBLE-Arduino (Instalar via Library Manager)
+ * Biblioteca necessária: ArduinoJson (Instalar via Library Manager)
  */
 
+ // --- BIBLIOTECAS ---
 #include <Arduino.h>
 #include <BLEDevice.h>
 #include <BLEUtils.h>
@@ -31,6 +32,7 @@ const int MAX_SCANS = 10;
 struct DeviceData {
   String name;
   String address;
+  int addrType;
   int rssi;
   int txPower;
   String manufacturerData;
@@ -43,7 +45,7 @@ std::vector<String> sessionMacAddresses;
 
 BLEScan* pBLEScan;
 
-// --- FUNÇÕES AUXILIARES ---
+// --- PROTÓTIPO DAS FUNÇÕES AUXILIARES ---
 void initFS();
 bool isAddressAlreadySaved(String address);
 String payloadToHex(uint8_t* payload, size_t length);
@@ -52,14 +54,14 @@ void loadDataToArray();
 void processarDadosDoArray();
 void realizarAuditoriaEmDispositivo(const DeviceData& device, int index);
 String analisarTipoMAC(String mac);
-void explorarServicosAtivos(String address);
+void explorarServicosAtivos(String address, int addrType);
 String traduzirUUID(String uuid);
 String obterPropriedades(BLERemoteCharacteristic* pChar);
 
 // ---  SETUP E LOOP ---
 void setup() {
   Serial.begin(115200);
-  delay(2000);
+  delay(4000);
 
   Serial.println("\n=== INICIANDO SISTEMA DE AUDITORIA BLE (DEEP SCAN) ===");
   initFS();
@@ -85,7 +87,6 @@ void loop() {
     saveScanToFile(foundDevices);
     pBLEScan->clearResults(); 
 
-    //if (i < MAX_SCANS - 1) delay(2000);
     delay(5000);
   }
 
@@ -104,7 +105,9 @@ void loop() {
   }
 }
 
-/* IMPLEMENTAÇÃO DAS FUNÇÕES AUXILIARES */
+// --- IMPLEMENTAÇÃO DAS FUNÇÕES AUXILIARES ---
+// --------------------------------------------
+// Inicializa o sistema de arquivos LittleFS
 void initFS() {
   if (!LittleFS.begin(true)) {
     Serial.println("Erro Fatal: Falha ao montar LittleFS");
@@ -118,6 +121,7 @@ void initFS() {
   }
 }
 
+// Verifica se o endereço MAC já foi salvo na sessão atual
 bool isAddressAlreadySaved(String address) {
   for (const String& savedAddr : sessionMacAddresses) {
     if (savedAddr.equals(address)) {
@@ -127,6 +131,7 @@ bool isAddressAlreadySaved(String address) {
   return false;
 }
 
+// Converte o payload bruto em uma string hexadecimal
 String payloadToHex(uint8_t* payload, size_t length) {
   String hexString = "";
   if (length > 0 && payload != nullptr) {
@@ -138,6 +143,7 @@ String payloadToHex(uint8_t* payload, size_t length) {
   return hexString;
 }
 
+// Salva os novos dispositivos detectados em um arquivo JSONL (no ESP32)
 void saveScanToFile(BLEScanResults foundDevices) {
   File file = LittleFS.open(DATA_FILENAME, "a");
   if (!file) {
@@ -161,6 +167,7 @@ void saveScanToFile(BLEScanResults foundDevices) {
     JsonDocument doc;    
     doc["name"] = device.haveName() ? device.getName() : "N/A";
     doc["addr"] = device.getAddress().toString();
+    doc["addrType"] = (int)device.getAddressType();
     doc["rssi"] = device.haveRSSI() ? device.getRSSI() : 0;
     doc["txPower"] = device.haveTXPower() ? device.getTXPower() : -127;
 
@@ -189,12 +196,13 @@ void saveScanToFile(BLEScanResults foundDevices) {
   
   file.close();
   if (newDevicesCount > 0) {
-    Serial.printf("Novos dispositivos únicos arquivados: %d\n", newDevicesCount);
+    Serial.printf("Novos dispositivos encontrados: %d\n", newDevicesCount);
   } else {
-    Serial.println("Nenhum novo dispositivo único encontrado neste ciclo.");
+    Serial.println("Nenhum novo dispositivo encontrado neste ciclo.");
   }
 }
 
+// Carrega os dados do arquivo para o array na RAM
 void loadDataToArray() {
   currentDeviceList.clear();
   std::vector<String>().swap(sessionMacAddresses);
@@ -217,6 +225,7 @@ void loadDataToArray() {
         DeviceData data;
         data.name = doc["name"].as<String>();
         data.address = doc["addr"].as<String>();
+        data.addrType = doc.containsKey("type") ? doc["addrType"].as<int>() : 0;
         data.rssi = doc["rssi"];
         data.txPower = doc["txPower"];
         data.manufacturerData = doc["manufacturerData"].as<String>();
@@ -230,7 +239,7 @@ void loadDataToArray() {
   
   Serial.printf("Registros carregados na RAM para auditoria: %d\n", currentDeviceList.size());
 }
-
+// Processa os dados carregados e realiza a auditoria
 String analisarTipoMAC(String mac) {
     // Se o bit menos significativo do primeiro byte for 1, é Multicast (não comum em device address).
     // Se o segundo bit menos significativo for 1, é "Locally Administered" (Random).
@@ -246,6 +255,7 @@ String analisarTipoMAC(String mac) {
     }
 }
 
+// Traduz o UUID padrão para uma descrição conhecida
 String traduzirUUID(String uuid) {
     uuid.toLowerCase();
     if (uuid.indexOf("1800") >= 0) return "Generic Access";
@@ -260,6 +270,7 @@ String traduzirUUID(String uuid) {
     return "Desconhecido / Proprietário";
 }
 
+// Obtém as propriedades de uma característica remota
 String obterPropriedades(BLERemoteCharacteristic* pChar) {
     String props = "";
     if (pChar->canRead()) props += "READ ";
@@ -273,11 +284,14 @@ String obterPropriedades(BLERemoteCharacteristic* pChar) {
     return "[" + props + "]";
 }
 
-void explorarServicosAtivos(String address) {
+// Explora os serviços ativos de um dispositivo BLE
+void explorarServicosAtivos(String address, int addrType) {
     Serial.println("    >>> INICIANDO PROBING (DEEP SCAN) <<<");
     BLEClient* pClient = BLEDevice::createClient();
-    
-    if (pClient->connect(BLEAddress(address.c_str()))) {
+
+    esp_ble_addr_type_t type = (esp_ble_addr_type_t)addrType;
+
+    if (pClient->connect(BLEAddress(address.c_str()), type)) {
         Serial.println("    [CONECTADO] Conectado ao alvo. A ler tabela GATT...");
         
         std::map<std::string, BLERemoteService*>* pServices = pClient->getServices();        
@@ -300,14 +314,6 @@ void explorarServicosAtivos(String address) {
                     }
                 }
             }
-            
-            /*
-            for (auto const& [uuid_str, remoteService] : *pServices) {
-                String uuidClean = String(remoteService->getUUID().toString().c_str());
-                String description = traduzirUUID(uuidClean);
-                Serial.printf("       - UUID: %s [%s]\n", uuidClean.c_str(), description.c_str());
-            }
-            */
         } else {
             Serial.println("    [ERRO] Falha ao enumerar serviços.");
         }
@@ -322,6 +328,7 @@ void explorarServicosAtivos(String address) {
     delay(500);
 }
 
+// Realiza a auditoria detalhada de um dispositivo específico
 void realizarAuditoriaEmDispositivo(const DeviceData& device, int index) {
     Serial.printf("\n[ALVO #%02d] %s\n", index + 1, device.address.c_str());
     Serial.println("----------------------------------------------------------------");
@@ -338,7 +345,7 @@ void realizarAuditoriaEmDispositivo(const DeviceData& device, int index) {
     Serial.printf("Sinal (RSSI):  %d dBm", device.rssi);
     if (device.rssi > -60) {
       Serial.println(" [CRÍTICO: Alvo próximo - Executando Deep Scan]");
-      explorarServicosAtivos(device.address);
+      explorarServicosAtivos(device.address, device.addrType);
     } else if (device.rssi > -70) {
       Serial.println("ALERTA: Próximo (Sala)");
     } else if (device.rssi > -90) {
@@ -365,6 +372,7 @@ void realizarAuditoriaEmDispositivo(const DeviceData& device, int index) {
     }
 }
 
+// Processa os dados carregados do array
 void processarDadosDoArray() {
   if (currentDeviceList.empty()) {
     Serial.println("Nenhum dispositivo para auditar.");
