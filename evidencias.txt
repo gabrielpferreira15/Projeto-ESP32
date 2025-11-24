@@ -1,0 +1,216 @@
+--- Terminal on /dev/ttyUSB0 | 115200 8-N-1
+--- Available filters and text transformations: colorize, debug, default, direct, esp32_exception_decoder, hexlify, log2file, nocontrol, printable, send_on_enter, time
+--- More details at https://bit.ly/pio-monitor-filters
+--- Quit: Ctrl+C | Menu: Ctrl+T | Help: Ctrl+T followed by Ctrl+H
+
+=== INICIANDO SISTEMA DE AUDITORIA BLE (DEEP SCAN) ===
+LittleFS OK.
+Log anterior limpo com sucesso.
+Sistema pronto. Iniciando escaneamento.
+
+--- Ciclo de Escaneamento 1/10 ---
+Dispositivos detectados: 9
+Novos dispositivos únicos arquivados: 9
+
+--- Ciclo de Escaneamento 2/10 ---
+Dispositivos detectados: 9
+Nenhum novo dispositivo único encontrado neste ciclo.
+
+--- Ciclo de Escaneamento 3/10 ---
+Dispositivos detectados: 8
+Nenhum novo dispositivo único encontrado neste ciclo.
+
+--- Ciclo de Escaneamento 4/10 ---
+Dispositivos detectados: 9
+Novos dispositivos únicos arquivados: 1
+
+--- Ciclo de Escaneamento 5/10 ---
+Dispositivos detectados: 9
+Nenhum novo dispositivo único encontrado neste ciclo.
+
+--- Ciclo de Escaneamento 6/10 ---
+Dispositivos detectados: 9
+Novos dispositivos únicos arquivados: 1
+
+--- Ciclo de Escaneamento 7/10 ---
+Dispositivos detectados: 10
+Nenhum novo dispositivo único encontrado neste ciclo.
+
+--- Ciclo de Escaneamento 8/10 ---
+Dispositivos detectados: 9
+Nenhum novo dispositivo único encontrado neste ciclo.
+
+--- Ciclo de Escaneamento 9/10 ---
+Dispositivos detectados: 8
+Nenhum novo dispositivo único encontrado neste ciclo.
+
+--- Ciclo de Escaneamento 10/10 ---
+Dispositivos detectados: 9
+Nenhum novo dispositivo único encontrado neste ciclo.
+
+>>> COLETA CONCLUÍDA. INICIANDO CARREGAMENTO <<<
+--- Lendo dados ÚNICOS do arquivo para a RAM ---
+Registros carregados na RAM para auditoria: 11
+
+================ RELATÓRIO DE AUDITORIA ================
+
+[ALVO #01] 14:82:e0:24:cd:5f
+----------------------------------------------------------------
+Nome:          NÃO IDENTIFICADO (Suspeito ou Beacon simples)
+Tipo MAC:      PUBLIC (Fixo de Fábrica)
+Sinal (RSSI):  -49 dBm [CRÍTICO: Alvo próximo - Executando Deep Scan]
+    >>> INICIANDO PROBING (DEEP SCAN) <<<
+[133257][E][BLEClient.cpp:239] gattClientEventHandler(): Failed to connect, status=Unknown ESP_ERR error
+    [FALHA] O dispositivo recusou a conexão ou saiu do alcance.
+Dados Fabr.:   Não foi possível obter dados de fabricante.
+Payload:       DETECTADO (31 bytes)
+
+[ALVO #02] 20:d0:c1:fe:b2:e8
+----------------------------------------------------------------
+Nome:          NÃO IDENTIFICADO (Suspeito ou Beacon simples)
+Tipo MAC:      PUBLIC (Fixo de Fábrica)
+Sinal (RSSI):  -66 dBmALERTA: Próximo (Sala)
+Dados Fabr.:   4C0012020001 (Tam: 6 bytes)
+               -> DETECÇÃO: Provável dispositivo Apple/iBeacon
+Payload:       DETECTADO (8 bytes)
+
+[ALVO #03] 4a:b1:64:c5:a5:bc
+----------------------------------------------------------------
+Nome:          NÃO IDENTIFICADO (Suspeito ou Beacon simples)
+Tipo MAC:      RANDOM/PRIVATE (Privacidade Ativa)
+Sinal (RSSI):  -64 dBmALERTA: Próximo (Sala)
+Dados Fabr.:   75002CD71AE46E8A9F (Tam: 9 bytes)
+Payload:       DETECTADO (42 bytes)
+
+[ALVO #04] 4c:57:39:da:04:16
+----------------------------------------------------------------
+Nome:          NÃO IDENTIFICADO (Suspeito ou Beacon simples)
+Tipo MAC:      PUBLIC (Fixo de Fábrica)
+Sinal (RSSI):  -85 dBmINFO: Distante
+Dados Fabr.:   750042040180664C5739DA04164E5739DA041501719B6B000000 (Tam: 26 bytes)
+Payload:       DETECTADO (28 bytes)
+
+[ALVO #05] 54:0d:61:5b:ee:3a
+----------------------------------------------------------------
+Nome:          NÃO IDENTIFICADO (Suspeito ou Beacon simples)
+Tipo MAC:      PUBLIC (Fixo de Fábrica)
+Sinal (RSSI):  -87 dBmINFO: Distante
+Dados Fabr.:   E0004440CA378317 (Tam: 8 bytes)
+Payload:       DETECTADO (38 bytes)
+
+[ALVO #06] 54:44:a3:d7:ab:81
+----------------------------------------------------------------
+Nome:          NÃO IDENTIFICADO (Suspeito ou Beacon simples)
+Tipo MAC:      PUBLIC (Fixo de Fábrica)
+Sinal (RSSI):  -72 dBmINFO: Distante
+Dados Fabr.:   750042040180665444A3D7AB815644A3D7AB8001719B00000000 (Tam: 26 bytes)
+Payload:       DETECTADO (28 bytes)
+
+[ALVO #07] 56:a7:97:72:da:ce
+----------------------------------------------------------------
+Nome:          NÃO IDENTIFICADO (Suspeito ou Beacon simples)
+Tipo MAC:      RANDOM/PRIVATE (Privacidade Ativa)
+Sinal (RSSI):  -88 dBmINFO: Distante
+Dados Fabr.:   Não foi possível obter dados de fabricante.
+Payload:       DETECTADO (31 bytes)
+
+[ALVO #08] 74:19:0a:10:c9:6b
+----------------------------------------------------------------
+Nome:          Galaxy Fit3 (C96B)
+Tipo MAC:      PUBLIC (Fixo de Fábrica)
+Sinal (RSSI):  -59 dBm [CRÍTICO: Alvo próximo - Executando Deep Scan]
+    >>> INICIANDO PROBING (DEEP SCAN) <<<
+    [CONECTADO] Conectado ao alvo. A ler tabela GATT...
+    [INFO] Serviços encontrados: 8
+       + Serviço: 00001800-0000-1000-8000-00805f9b34fb (Generic Access)
+[136233][E][BLERemoteCharacteristic.cpp:289] retrieveDescriptors(): esp_ble_gattc_get_all_descr: Unknown
+[136251][E][BLERemoteCharacteristic.cpp:289] retrieveDescriptors(): esp_ble_gattc_get_all_descr: Unknown
+[136261][E][BLERemoteCharacteristic.cpp:289] retrieveDescriptors(): esp_ble_gattc_get_all_descr: Unknown
+          -> Char: 00002a00-0000-1000-8000-00805f9b34fb  [READ ]
+          -> Char: 00002a01-0000-1000-8000-00805f9b34fb  [READ ]
+          -> Char: 00002aa6-0000-1000-8000-00805f9b34fb  [READ ]
+       + Serviço: 00001801-0000-1000-8000-00805f9b34fb (Generic Attribute)
+[136293][E][BLERemoteCharacteristic.cpp:289] retrieveDescriptors(): esp_ble_gattc_get_all_descr: Unknown
+[136304][E][BLERemoteCharacteristic.cpp:289] retrieveDescriptors(): esp_ble_gattc_get_all_descr: Unknown
+          -> Char: 00002a05-0000-1000-8000-00805f9b34fb  [INDICATE ]
+          -> Char: 00002b29-0000-1000-8000-00805f9b34fb  [READ WRITE ]
+          -> Char: 00002b3a-0000-1000-8000-00805f9b34fb  [READ ]
+       + Serviço: 0000180a-0000-1000-8000-00805f9b34fb (Device Information)
+[136336][E][BLERemoteCharacteristic.cpp:289] retrieveDescriptors(): esp_ble_gattc_get_all_descr: Unknown
+[136348][E][BLERemoteCharacteristic.cpp:289] retrieveDescriptors(): esp_ble_gattc_get_all_descr: Unknown
+[136358][E][BLERemoteCharacteristic.cpp:289] retrieveDescriptors(): esp_ble_gattc_get_all_descr: Unknown
+[136367][E][BLERemoteCharacteristic.cpp:289] retrieveDescriptors(): esp_ble_gattc_get_all_descr: Unknown
+[136377][E][BLERemoteCharacteristic.cpp:289] retrieveDescriptors(): esp_ble_gattc_get_all_descr: Unknown
+[136387][E][BLERemoteCharacteristic.cpp:289] retrieveDescriptors(): esp_ble_gattc_get_all_descr: Unknown
+[136397][E][BLERemoteCharacteristic.cpp:289] retrieveDescriptors(): esp_ble_gattc_get_all_descr: Unknown
+[136407][E][BLERemoteCharacteristic.cpp:289] retrieveDescriptors(): esp_ble_gattc_get_all_descr: Unknown
+[136417][E][BLERemoteCharacteristic.cpp:289] retrieveDescriptors(): esp_ble_gattc_get_all_descr: Unknown
+          -> Char: 00002a23-0000-1000-8000-00805f9b34fb  [READ ]
+          -> Char: 00002a24-0000-1000-8000-00805f9b34fb  [READ ]
+          -> Char: 00002a25-0000-1000-8000-00805f9b34fb  [READ ]
+          -> Char: 00002a26-0000-1000-8000-00805f9b34fb  [READ ]
+          -> Char: 00002a27-0000-1000-8000-00805f9b34fb  [READ ]
+          -> Char: 00002a28-0000-1000-8000-00805f9b34fb  [READ ]
+          -> Char: 00002a29-0000-1000-8000-00805f9b34fb  [READ ]
+          -> Char: 00002a2a-0000-1000-8000-00805f9b34fb  [READ ]
+          -> Char: 00002a50-0000-1000-8000-00805f9b34fb  [READ ]
+       + Serviço: 0000180d-0000-1000-8000-00805f9b34fb (Heart Rate)
+[136482][E][BLERemoteCharacteristic.cpp:289] retrieveDescriptors(): esp_ble_gattc_get_all_descr: Unknown
+[136493][E][BLERemoteCharacteristic.cpp:289] retrieveDescriptors(): esp_ble_gattc_get_all_descr: Unknown
+          -> Char: 00002a37-0000-1000-8000-00805f9b34fb  [NOTIFY ]
+          -> Char: 00002a38-0000-1000-8000-00805f9b34fb  [READ ]
+          -> Char: 00002a39-0000-1000-8000-00805f9b34fb  [WRITE ]
+       + Serviço: 00001a1a-0000-1000-8000-00805f9b34fb (Desconhecido / Proprietário)
+[136526][E][BLERemoteCharacteristic.cpp:289] retrieveDescriptors(): esp_ble_gattc_get_all_descr: Unknown
+          -> Char: 63e30bad-4206-4596-839f-e47cbf7a4b5d  [WRITE WRITE_NO_RESP ]
+          -> Char: 797ae4e9-2e58-4fe8-b48d-b5c79599fb9b  [READ NOTIFY ]
+       + Serviço: 0000fd69-0000-1000-8000-00805f9b34fb (Desconhecido / Proprietário)
+          -> Char: 4af351bb-d6f7-4612-a8e3-8dce6ca13e7b  [READ WRITE INDICATE ]
+          -> Char: 66aeea2f-1edf-445b-bcfb-7ef330268073  [READ WRITE INDICATE ]
+          -> Char: 853bd048-b043-4dcd-b073-de49569e1194  [READ WRITE INDICATE ]
+       + Serviço: 1b7e8251-2877-41c3-b46e-cf057c562023 (Desconhecido / Proprietário)
+          -> Char: 8ac32d3f-5cb9-4d44-bec2-ee689169f626  [READ WRITE WRITE_NO_RESP NOTIFY ]
+       + Serviço: eedd5e73-6aa8-4673-8219-398a489da87c (Desconhecido / Proprietário)
+[136597][E][BLERemoteCharacteristic.cpp:289] retrieveDescriptors(): esp_ble_gattc_get_all_descr: Unknown
+[136612][E][BLERemoteCharacteristic.cpp:289] retrieveDescriptors(): esp_ble_gattc_get_all_descr: Unknown
+[136622][E][BLERemoteCharacteristic.cpp:289] retrieveDescriptors(): esp_ble_gattc_get_all_descr: Unknown
+          -> Char: 4ebe81f6-b952-465e-9ece-5ca39d4e8955  [WRITE ]
+          -> Char: 50f98bfd-158c-4efa-add4-0a70c2f5df5d  [READ ]
+          -> Char: a12be31c-5b38-4773-9b9d-3d5735233a7c  [READ ]
+    [FIM] Desconectado.
+Dados Fabr.:   7500010002000103FF00004328020A10C96B (Tam: 18 bytes)
+Payload:       DETECTADO (51 bytes)
+
+[ALVO #09] 74:19:0a:4a:97:f3
+----------------------------------------------------------------
+Nome:          Galaxy Fit3 (97F3)
+Tipo MAC:      PUBLIC (Fixo de Fábrica)
+Sinal (RSSI):  -97 dBmINFO: Sinal fraco/Instável
+Dados Fabr.:   7500010002000102FF0000432A020A4A97F3 (Tam: 18 bytes)
+Payload:       DETECTADO (51 bytes)
+
+[ALVO #10] 48:26:7b:eb:62:02
+----------------------------------------------------------------
+Nome:          NÃO IDENTIFICADO (Suspeito ou Beacon simples)
+Tipo MAC:      PUBLIC (Fixo de Fábrica)
+Sinal (RSSI):  -49 dBm [CRÍTICO: Alvo próximo - Executando Deep Scan]
+    >>> INICIANDO PROBING (DEEP SCAN) <<<
+[167217][E][BLEClient.cpp:239] gattClientEventHandler(): Failed to connect, status=Unknown ESP_ERR error
+    [FALHA] O dispositivo recusou a conexão ou saiu do alcance.
+Dados Fabr.:   Não foi possível obter dados de fabricante.
+Payload:       DETECTADO (24 bytes)
+
+[ALVO #11] 7b:37:c9:76:30:41
+----------------------------------------------------------------
+Nome:          NÃO IDENTIFICADO (Suspeito ou Beacon simples)
+Tipo MAC:      RANDOM/PRIVATE (Privacidade Ativa)
+Sinal (RSSI):  -87 dBmINFO: Distante
+Dados Fabr.:   4C0002151CA92E23F0874DF7B9A2FD4B716A4BF6DC4D000003 (Tam: 25 bytes)
+               -> DETECÇÃO: Provável dispositivo Apple/iBeacon
+Payload:       DETECTADO (30 bytes)
+
+--- Resumo Estatístico ---
+Total Auditado: 11 dispositivos
+========================================================
+
+--- Processo finalizado. Sistema em Standby. ---
